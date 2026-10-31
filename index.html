@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1117">
+<meta name="format-detection" content="telephone=no">
+<title>Social Dashboard · BioPalm</title>
+<meta name="robots" content="noindex,nofollow">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0f1117;--card:#181b24;--border:#2a2f3d;--text:#e8eaed;--mute:#8a93a6;--accent:#6ee7b7;--accent2:#fbbf24;--danger:#f87171;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",sans-serif;background:var(--bg);color:var(--text);font-size:14px;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.container{max-width:1500px;margin:0 auto;padding:20px}
+h1{font-size:22px;margin:0 0 4px;line-height:1.25}
+.sub{color:var(--mute);font-size:13px;margin-bottom:20px;line-height:1.5}
+.sub code{background:#0f1117;padding:1px 6px;border-radius:4px;font-size:11px;word-break:break-all}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+.kpi .lbl{color:var(--mute);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.kpi .val{font-size:22px;font-weight:700;margin-top:4px;line-height:1.2}
+.kpi .small{font-size:11px;color:var(--mute);margin-top:2px}
+.section{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
+.section h2{font-size:15px;margin:0 0 12px;color:var(--accent);line-height:1.3}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.controls label{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:4px}
+.controls select,.controls input{background:#0f1117;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;min-width:130px;min-height:36px}
+.btn{background:var(--accent);color:#0f1117;border:none;padding:8px 14px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px;min-height:36px}
+.btn:hover{opacity:.85}
+.btn:active{transform:scale(.98)}
+.btn-ghost{background:transparent;color:var(--mute);border:1px solid var(--border)}
+.fmt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.fmt-card{background:#0f1117;border:1px solid var(--border);border-radius:8px;padding:12px}
+.fmt-card h3{margin:0 0 8px;font-size:13px;color:var(--accent2);display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px}
+.fmt-card .cnt{color:var(--mute);font-weight:400;font-size:12px}
+.top-item{padding:8px 0;border-top:1px solid var(--border);font-size:12px}
+.top-item:first-of-type{border-top:none}
+.top-item .b{color:var(--accent);font-weight:600}
+.top-item .cap{color:var(--text);margin:2px 0 4px;line-height:1.4;word-break:break-word}
+.top-item .stats{color:var(--mute);font-size:11px;line-height:1.5}
+.top-item a{color:var(--accent);text-decoration:none;font-size:11px;display:inline-block;padding:6px 0;min-height:32px}
+.top-item a:hover{text-decoration:underline}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{background:#0f1117;text-align:left;padding:10px 8px;border-bottom:2px solid var(--border);color:var(--mute);font-weight:600;font-size:11px;text-transform:uppercase;cursor:pointer;user-select:none;white-space:nowrap;position:sticky;top:0;z-index:1}
+th:hover{color:var(--accent)}
+th.active{color:var(--accent)}
+th.active::after{content:" \2193"}
+th.active.asc::after{content:" \2191"}
+td{padding:9px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:hover td{background:#1c2030}
+/* === Emphasis: 6 ช่องแรกเด่น (Brand + Caption เด่นที่สุด), ตัวเลขท้ายเล็กลง === */
+td[data-label="Brand"]{font-size:15px;font-weight:700;color:#fff;min-width:120px}
+td[data-label="Brand"] strong{color:var(--accent)}
+td[data-label="Caption"]{font-size:13.5px;line-height:1.55;color:var(--text)}
+td[data-label="Platform"], td[data-label="Format"], td[data-label="ประเภท"], td[data-label="Topic"]{font-size:12.5px}
+td[data-label="Date"]{font-size:11px;color:var(--mute);white-space:nowrap}
+td.num{font-size:11.5px}
+td[data-label="#Tags"], td[data-label="Total Eng"]{font-size:11px;color:var(--mute)}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;white-space:nowrap}
+.b-tt{background:#ff0050;color:#fff}
+.b-yt{background:#ff0000;color:#fff}
+.b-ig{background:linear-gradient(45deg,#feda75,#d62976,#962fbf);color:#fff}
+.b-fb{background:#1877f2;color:#fff}
+.b-fmt-sv{background:#1e3a5f;color:#93c5fd}
+.b-fmt-c{background:#3a2f1e;color:#fcd34d}
+.b-fmt-lv{background:#3a1e2f;color:#fda4af}
+.b-fmt-r{background:#1e3a2e;color:#86efac}
+.cap-cell{max-width:480px;min-width:280px;line-height:1.55;word-break:break-word}
+.copy-btn{background:transparent;color:var(--accent);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:10px;cursor:pointer;margin-left:4px;min-height:28px}
+.copy-btn:hover{background:var(--accent);color:#0f1117}
+.tbl-wrap{max-height:600px;overflow:auto;border:1px solid var(--border);border-radius:8px;-webkit-overflow-scrolling:touch}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.muted{color:var(--mute)}
+.cta-open{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#0f1117;text-decoration:none;padding:8px 14px;border-radius:6px;font-weight:600;font-size:12px;white-space:nowrap;min-height:34px}
+.cta-open:active{transform:scale(.97)}
+.load-more{display:block;width:100%;margin:12px 0 0;padding:14px;background:var(--card);border:1px dashed var(--border);color:var(--accent);font-size:14px;font-weight:600;border-radius:8px;cursor:pointer;min-height:48px}
+.load-more:hover{background:#1c2030}
+.row-summary{padding:8px 4px;color:var(--mute);font-size:12px;text-align:center}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.chart-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;height:240px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--mute);margin-top:6px;line-height:1.5}
+
+/* === Login gate (full-screen) === */
+.gate{position:fixed;inset:0;z-index:99998;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+.gate-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px;max-width:380px;width:100%;text-align:center}
+.gate-card h2{margin:0 0 8px;font-size:18px;color:var(--accent)}
+.gate-card p{margin:0 0 16px;color:var(--mute);font-size:13px;line-height:1.5}
+.gate-card label.fl{display:block;text-align:left;font-size:12px;color:var(--mute);margin:0 0 6px}
+.gate-card input[type=text],.gate-card input[type=password]{width:100%;padding:14px 16px;font-size:16px;background:#0f1117;color:var(--text);border:1px solid var(--border);border-radius:8px;margin-bottom:12px}
+.gate-card input:focus{outline:none;border-color:var(--accent)}
+.gate-card .remember{display:flex;align-items:center;gap:8px;justify-content:flex-start;font-size:12px;color:var(--mute);margin:0 0 14px;cursor:pointer}
+.gate-card .btn{width:100%;padding:14px;font-size:15px}
+.gate-card .btn:disabled{opacity:.6;cursor:wait}
+.gate-card .err{display:none;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.4);color:var(--danger);border-radius:8px;padding:10px 12px;font-size:13px;margin:0 0 14px}
+.gate-card .err.on{display:block}
+.gate-card .note{font-size:11px;color:var(--mute);margin-top:14px;line-height:1.5}
+
+/* === Top bar (title + logout) === */
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.topbar .logout{text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap;width:auto !important;font-size:12px !important;padding:6px 12px !important;min-height:32px !important;flex-shrink:0}
+
+/* === Watermark overlay === */
+.wm{position:fixed;inset:0;z-index:9997;pointer-events:none;opacity:.07;font-size:18px;font-weight:600;color:var(--text);overflow:hidden;user-select:none}
+.wm-grid{position:absolute;inset:-50% -50%;transform:rotate(-30deg);display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:60px;padding:40px;white-space:nowrap}
+.wm-grid span{display:block}
+@media (max-width:640px){
+  .wm{opacity:.09;font-size:14px}
+  .wm-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:40px}
+}
+
+/* === Tablet (≤1024px) — charts stack, KPI 3 col, table horizontal scroll === */
+@media (max-width:1024px){
+  .container{padding:16px}
+  .charts{grid-template-columns:1fr}
+  .chart-box{height:220px}
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  table{min-width:900px}
+  .tbl-wrap{max-height:70vh}
+}
+
+/* === Mobile (≤640px) — table → cards, KPI 2 col, full-width filters === */
+@media (max-width:640px){
+  body{font-size:13px}
+  .container{padding:12px}
+  h1{font-size:18px}
+  .sub{font-size:11.5px;margin-bottom:14px}
+
+  /* KPI: 2 columns, compact */
+  .kpi-grid{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+  .kpi{padding:10px;border-radius:8px}
+  .kpi .lbl{font-size:10px}
+  .kpi .val{font-size:17px}
+  .kpi .small{font-size:10px}
+
+  /* Charts */
+  .chart-box{height:200px;padding:8px}
+
+  /* Section */
+  .section{padding:12px;margin-bottom:12px;border-radius:8px}
+  .section h2{font-size:14px;margin-bottom:10px}
+
+  /* Format cards: stacked */
+  .fmt-grid{grid-template-columns:1fr;gap:8px}
+
+  /* Filters: full-width, stacked */
+  .controls{flex-direction:column;align-items:stretch;gap:10px}
+  .controls label{width:100%}
+  .controls select,.controls input{width:100%;min-width:0;padding:10px 12px;font-size:14px;min-height:42px}
+  .btn,.btn-ghost{width:100%;padding:12px;font-size:14px;min-height:44px}
+
+  /* === Table → Card layout === */
+  .tbl-wrap{max-height:none;border:none;background:transparent;border-radius:0;overflow:visible}
+  table{min-width:0;display:block}
+  table thead{display:none}
+  table tbody{display:block}
+  table tr{
+    display:block;
+    background:#0f1117;
+    border:1px solid var(--border);
+    border-radius:10px;
+    margin-bottom:12px;
+    padding:14px 14px 12px;
+  }
+  table tr:hover td{background:transparent}
+  table td{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    padding:5px 0;
+    border:none;
+    border-bottom:1px dashed var(--border);
+    text-align:right;
+    font-size:12px;
+  }
+  table td:last-child{border-bottom:none}
+  table td::before{
+    content:attr(data-label);
+    color:var(--mute);
+    font-size:10px;
+    text-transform:uppercase;
+    font-weight:600;
+    letter-spacing:.5px;
+    text-align:left;
+    flex-shrink:0;
+    min-width:72px;
+    padding-top:2px;
+  }
+  /* Brand = card header ใหญ่ ไม่มี label */
+  table td[data-label="Brand"]{
+    display:block;
+    text-align:left;
+    font-size:18px;
+    font-weight:800;
+    padding:0 0 10px;
+    border-bottom:1px solid var(--border);
+    margin-bottom:6px;
+  }
+  table td[data-label="Brand"]::before{display:none}
+  table td[data-label="Brand"] strong{color:var(--accent)}
+  /* Platform/Format/ประเภท/Topic — group ติดกัน ตัวกลาง */
+  table td[data-label="Platform"], table td[data-label="Format"], table td[data-label="ประเภท"]{
+    font-size:12.5px;
+  }
+  table td[data-label="Topic"]{
+    font-size:12px;color:var(--mute);
+  }
+  /* Caption — เด่นเป็นพิเศษ */
+  table td.cap-cell{
+    flex-direction:column;
+    align-items:stretch;
+    text-align:left;
+    gap:6px;
+    padding:10px 0 8px;
+    font-size:14px;
+    line-height:1.55;
+  }
+  table td.cap-cell::before{
+    min-width:0;
+    font-size:10px;
+  }
+  table td.cap-cell .cap-text{
+    max-height:6em;
+    overflow:hidden;
+    display:-webkit-box;
+    -webkit-line-clamp:4;
+    -webkit-box-orient:vertical;
+    line-height:1.55;
+    color:var(--text);
+  }
+  /* ตัวเลข + Date — เล็กลง, muted */
+  table td.num, table td[data-label="Date"]{
+    font-size:11.5px;
+    color:var(--mute);
+  }
+  table td.num strong{color:var(--text);font-weight:600}
+  table td.cap-cell.expanded .cap-text{max-height:none;-webkit-line-clamp:unset;display:block}
+  table td.num{justify-content:space-between}
+  .copy-btn{margin-left:0;align-self:flex-start;padding:6px 10px;font-size:11px;min-height:32px}
+  /* Link cell: full-width CTA button */
+  table td[data-label="Link"]{
+    display:block;
+    padding:10px 0 2px;
+    border-bottom:none;
+  }
+  table td[data-label="Link"]::before{display:none}
+  table td[data-label="Link"] .cta-open{
+    display:flex;
+    justify-content:center;
+    width:100%;
+    padding:14px;
+    font-size:15px;
+    min-height:48px;
+    border-radius:8px;
+  }
+}
+
+/* === Very small phones (≤380px) === */
+@media (max-width:380px){
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:6px}
+  .kpi .val{font-size:15px}
+  table tr{padding:8px 10px}
+  table td::before{min-width:64px;font-size:9.5px}
+}
+</style>
+</head>
+<body>
+
+<!-- Login gate: ถอดรหัสข้อมูลในเบราว์เซอร์ด้วยชื่อผู้ใช้ + รหัสผ่าน -->
+<div id="gate" class="gate">
+  <form class="gate-card" id="gform" autocomplete="on">
+    <h2>🌿 Biopalm Dashboard</h2>
+    <p>กรอกชื่อผู้ใช้และรหัสผ่านที่ได้รับเพื่อเปิดดูข้อมูล</p>
+    <div class="err" id="gerr" role="alert"></div>
+    <label class="fl" for="gu">ชื่อผู้ใช้</label>
+    <input id="gu" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label class="fl" for="gp">รหัสผ่าน</label>
+    <input id="gp" name="password" type="password" autocomplete="current-password" required>
+    <label class="remember"><input type="checkbox" id="grem" checked> จำไว้ในเครื่องนี้ 7 วัน</label>
+    <button type="submit" class="btn" id="gb">เข้าดู Dashboard</button>
+    <div class="note">🔒 ข้อมูลเข้ารหัส AES-256-GCM และถอดรหัสในเครื่องของคุณเท่านั้น<br>⚠️ ข้อมูลภายใน Biopalm — ห้ามแชร์ลิงก์ รหัสผ่าน หรือภาพหน้าจอ</div>
+  </form>
+</div>
+
+<!-- Watermark overlay (filled after login) -->
+<div id="watermark" class="wm" style="display:none"></div>
+
+<div class="container" id="app" hidden>
+  <div class="topbar">
+    <h1 id="dashTitle">📊 Biopalm Social Dashboard</h1>
+    <button type="button" class="btn btn-ghost logout" onclick="logout()">ออกจากระบบ</button>
+  </div>
+  <div class="sub" id="dashSub">กำลังโหลดข้อมูล…</div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="charts">
+    <div class="chart-box"><canvas id="fmtChart"></canvas></div>
+    <div class="chart-box"><canvas id="brandChart"></canvas></div>
+  </div>
+
+  <div class="section">
+    <h2>🏆 Top 3 ของแต่ละ Format (แนะนำให้ดูก่อน)</h2>
+    <div class="fmt-grid" id="fmtTop"></div>
+  </div>
+
+  <div class="section">
+    <h2>🔍 Filters & Sort</h2>
+    <div class="controls">
+      <label>Platform<select id="fPlatform"><option value="">ทั้งหมด</option></select></label>
+      <label>Format<select id="fFormat"><option value="">ทั้งหมด</option></select></label>
+      <label>Brand<select id="fBrand"><option value="">ทั้งหมด</option></select></label>
+      <label>🏷️ ประเภท<select id="fContentType"><option value="">ทั้งหมด</option></select></label>
+      <label>Topic<select id="fTopic"><option value="">ทั้งหมด</option></select></label>
+      <label>เรียงตาม<select id="fSort">
+        <option value="rank">Default (Share→Save→Comment→Like)</option>
+        <option value="shares">Shares (สูง→ต่ำ)</option>
+        <option value="saves">Saves</option>
+        <option value="comments">Comments</option>
+        <option value="likes">Likes</option>
+        <option value="views">Views</option>
+        <option value="er">ER % (per-platform)</option>
+        <option value="quality">Quality % (CLR)</option>
+        <option value="like_rate">Like Rate % (LVR)</option>
+        <option value="engagement">Total Engagement</option>
+        <option value="date">วันที่ล่าสุด</option>
+      </select></label>
+      <button class="btn-ghost btn" onclick="resetFilters()">Reset</button>
+      <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>📋 ตารางหลัก — คลิก URL เปิด post จริง · คลิก header เพื่อ sort</h2>
+    <div class="tbl-wrap">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th data-k="brand">Brand</th>
+            <th data-k="platform">Platform</th>
+            <th data-k="format">Format</th>
+            <th data-k="content_type">🏷️ ประเภท</th>
+            <th data-k="topic">Topic</th>
+            <th data-k="caption">Caption</th>
+            <th data-k="date">Date</th>
+            <th data-k="shares" class="num active">Shares</th>
+            <th data-k="saves" class="num">Saves</th>
+            <th data-k="comments" class="num">Comments</th>
+            <th data-k="likes" class="num">Likes</th>
+            <th data-k="views" class="num">Views</th>
+            <th data-k="er" class="num" title="ER% per-platform — สูตรเฉพาะ platform (ดูได้ใน Legend ด้านล่าง)">ER %</th>
+            <th data-k="quality" class="num" title="Quality % (CLR) = Comment ÷ Like × 100 — content กระตุ้นบทสนทนาลึกแค่ไหน">Quality %</th>
+            <th data-k="like_rate" class="num" title="Like Rate % (LVR) = Like ÷ View × 100 — คนดูแล้วชอบจริงไหม (stopping power)">Like Rate %</th>
+            <th data-k="engagement" class="num">Total Eng</th>
+            <th data-k="hashtags" class="num">#Tags</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody id="tblBody"></tbody>
+      </table>
+    </div>
+    <button id="loadMoreBtn" class="load-more" onclick="appendRows()">โหลดเพิ่ม</button>
+    <div id="rowSummary" class="row-summary"></div>
+    <div class="legend" style="display:block;line-height:1.75">
+      <strong style="color:var(--accent)">📐 สูตรคำนวณ Metric:</strong><br>
+      • <strong>ER %</strong> (Engagement Rate per-platform) — คิดเฉพาะ field ที่ platform เปิด public:<br>
+      &nbsp;&nbsp;&nbsp;◦ <strong>TikTok / Facebook</strong>: (Like + Comment + Share) ÷ <strong>View</strong> × 100<br>
+      &nbsp;&nbsp;&nbsp;◦ <strong>YouTube / Instagram</strong>: (Like + Comment) ÷ <strong>View</strong> × 100 <span class="muted">(IG/YT ไม่เปิด share, save public)</span><br>
+      &nbsp;&nbsp;&nbsp;◦ ถ้า View = 0 หรือ Platform ไม่มี view → แสดง <strong>—</strong> (เพราะ benchmark ข้าม platform ไม่ fair)<br>
+      • <strong>Quality % (CLR)</strong> = Comment ÷ Like × 100<br>
+      &nbsp;&nbsp;&nbsp;= วัด <em>คุณภาพ engagement</em> — Comment ใช้ effort สูงกว่า Like มาก. ตัวเลขสูง = content กระตุ้นบทสนทนา<br>
+      • <strong>Like Rate % (LVR)</strong> = Like ÷ View × 100<br>
+      &nbsp;&nbsp;&nbsp;= วัด <em>stopping power</em> — คนเลื่อนผ่านแล้วหยุดดู+กด like มากแค่ไหน. ตัวเลขสูง = content ปังจริง<br>
+      <span class="muted">Avg ใน KPI card = เฉลี่ยเฉพาะ posts ที่คำนวณได้ (กัน N/A ฉุดค่า)</span><br><br>
+      <strong style="color:var(--accent)">ℹ️ ข้อจำกัด data:</strong>
+      <span class="muted">Save/Share บน Instagram และ YouTube = Meta/Google ไม่เปิด public — ดูได้แค่ของ account ตัวเองผ่าน Insights/Studio</span><br><br>
+      Topic ตรวจจากคำในแคปชั่น (สอน/รีวิว/คอร์ส/สอบ/ตลก) · Format ตรวจจากรูปแบบ URL ·
+      ประเภท Content (Awareness/Education/Engagement/Sell) classify โดย Claude Haiku
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Watermark (ชื่อผู้ใช้จาก login) ─────────────────────────────────
+function applyWatermark(name){
+  const wm = document.getElementById('watermark');
+  const ts = new Date().toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'});
+  const tag = `${name} · ${ts}`;
+  // Tile ~80 copies
+  const cells = Array.from({length:80}, () => `<span>${tag.replace(/</g,'&lt;')}</span>`).join('');
+  wm.innerHTML = `<div class="wm-grid">${cells}</div>`;
+  wm.style.display = 'block';
+}
+function esc(t){return String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+let POSTS = [];
+let view = [];
+let sortKey='rank', sortDir='desc';
+
+function platformBadge(p){
+  if(p==='TikTok') return '<span class="badge b-tt">TT</span>';
+  if(p==='YouTube') return '<span class="badge b-yt">YT</span>';
+  if(p==='Instagram') return '<span class="badge b-ig">IG</span>';
+  if(p==='Facebook') return '<span class="badge b-fb">FB</span>';
+  return p;
+}
+function fmtBadge(f){
+  if(f.includes('Short')||f.includes('Reel')) return '<span class="badge b-fmt-sv">'+f+'</span>';
+  if(f.includes('Carousel')||f.includes('Post')) return '<span class="badge b-fmt-c">'+f+'</span>';
+  if(f.includes('Long')) return '<span class="badge b-fmt-lv">'+f+'</span>';
+  return '<span class="badge b-fmt-r">'+f+'</span>';
+}
+
+function uniq(arr,k){return [...new Set(arr.map(x=>x[k]))].filter(Boolean).sort();}
+function fillSel(id, vals){
+  const s=document.getElementById(id);
+  vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o);});
+}
+
+const CTYPE_COLORS = {
+  'Awareness':  ['#0288D1','#fff'],
+  'Education':  ['#2E7D32','#fff'],
+  'Engagement': ['#F57C00','#fff'],
+  'Sell':       ['#C2185B','#fff'],
+  '—':          ['#555','#aaa'],
+};
+function ctypeBadge(c){
+  const [bg,fg] = CTYPE_COLORS[c] || CTYPE_COLORS['—'];
+  return `<span class="badge" style="background:${bg};color:${fg}">${c||'—'}</span>`;
+}
+
+function rankSort(a,b){
+  if(b.shares!==a.shares) return b.shares-a.shares;
+  if(b.saves!==a.saves) return b.saves-a.saves;
+  if(b.comments!==a.comments) return b.comments-a.comments;
+  if(b.likes!==a.likes) return b.likes-a.likes;
+  return b.engagement-a.engagement;
+}
+
+function applySort(){
+  if(sortKey==='rank'){view.sort(rankSort);return;}
+  view.sort((a,b)=>{
+    const va=a[sortKey],vb=b[sortKey];
+    if(typeof va==='number') return sortDir==='desc'?vb-va:va-vb;
+    return sortDir==='desc'?String(vb).localeCompare(String(va)):String(va).localeCompare(String(vb));
+  });
+}
+
+function applyFilters(){
+  const fp=document.getElementById('fPlatform').value;
+  const ff=document.getElementById('fFormat').value;
+  const fb=document.getElementById('fBrand').value;
+  const fc=document.getElementById('fContentType').value;
+  const ft=document.getElementById('fTopic').value;
+  view = POSTS.filter(p=>{
+    if(fp && p.platform!==fp) return false;
+    if(ff && p.format!==ff) return false;
+    if(fb && p.brand!==fb) return false;
+    if(fc && p.content_type!==fc) return false;
+    if(ft && !p.topic.includes(ft)) return false;
+    return true;
+  });
+  applySort();
+  render();
+}
+
+const PAGE_SIZE = 50;
+let renderedCount = 0;
+
+// platforms ที่ไม่เปิด public field
+const NO_SHARE = ['Instagram','YouTube'];      // Meta/Google ปิด share count
+const NO_VIEW_FB = ['Facebook'];                // FB ไม่ public view
+function fmtShare(p){
+  if(NO_SHARE.includes(p.platform) && p.shares===0) return '<span class="muted" title="Platform ไม่เปิด share public">—</span>';
+  return `<strong>${p.shares.toLocaleString()}</strong>`;
+}
+function fmtSave(p){
+  if(p.saves===0) return '<span class="muted" title="Save ไม่เปิด public ทุก platform — ดูได้แค่ของ account ตัวเอง">—</span>';
+  return p.saves.toLocaleString();
+}
+function fmtView(p){
+  if(NO_VIEW_FB.includes(p.platform) && p.views===0) return '<span class="muted" title="Facebook ไม่เปิด view public">—</span>';
+  return p.views.toLocaleString();
+}
+
+function buildRow(p, i){
+  const tr=document.createElement('tr');
+  const cap = p.caption.replace(/</g,'&lt;');
+  tr.innerHTML=`
+    <td data-label="Brand"><strong>${p.brand}</strong></td>
+    <td data-label="Platform">${platformBadge(p.platform)}</td>
+    <td data-label="Format">${fmtBadge(p.format)}</td>
+    <td data-label="ประเภท">${ctypeBadge(p.content_type)}</td>
+    <td data-label="Topic" class="muted">${p.topic}</td>
+    <td data-label="Caption" class="cap-cell" onclick="this.classList.toggle('expanded')"><div class="cap-text">${cap}</div><button class="copy-btn" onclick="event.stopPropagation();copyIdea(${i})">copy idea</button></td>
+    <td data-label="Date" class="muted">${p.date}</td>
+    <td data-label="Shares" class="num">${fmtShare(p)}</td>
+    <td data-label="Saves" class="num">${fmtSave(p)}</td>
+    <td data-label="Comments" class="num">${p.comments.toLocaleString()}</td>
+    <td data-label="Likes" class="num">${p.likes.toLocaleString()}</td>
+    <td data-label="Views" class="num muted">${fmtView(p)}</td>
+    <td data-label="ER %" class="num" title="${p.has_er ? p.er_formula : 'ไม่มี view → คำนวณ ER ไม่ได้'}">${p.has_er ? `<strong>${p.er}%</strong>` : '<span class="muted">—</span>'}</td>
+    <td data-label="Quality %" class="num" title="Comment÷Like — content กระตุ้นบทสนทนาแค่ไหน">${p.has_quality ? `<strong>${p.quality}%</strong>` : '<span class="muted">—</span>'}</td>
+    <td data-label="Like Rate %" class="num" title="Like÷View — คนดูแล้วชอบจริงไหม">${p.has_like_rate ? `<strong>${p.like_rate}%</strong>` : '<span class="muted">—</span>'}</td>
+    <td data-label="Total Eng" class="num">${p.engagement.toLocaleString()}</td>
+    <td data-label="#Tags" class="num muted">${p.hashtags}</td>
+    <td data-label="Link"><a class="cta-open" href="${p.url}" rel="noopener noreferrer">เปิด post ↗</a></td>
+  `;
+  return tr;
+}
+
+function updateLoadMore(){
+  const btn = document.getElementById('loadMoreBtn');
+  const summary = document.getElementById('rowSummary');
+  if(!btn || !summary) return;
+  if(renderedCount >= view.length){
+    btn.style.display = 'none';
+  } else {
+    btn.style.display = 'block';
+    btn.textContent = `โหลดเพิ่ม (เหลือ ${(view.length-renderedCount).toLocaleString()} posts)`;
+  }
+  summary.textContent = `แสดง ${Math.min(renderedCount,view.length).toLocaleString()} / ${view.length.toLocaleString()} posts`;
+}
+
+function appendRows(){
+  const tb=document.getElementById('tblBody');
+  const end = Math.min(renderedCount + PAGE_SIZE, view.length);
+  const frag = document.createDocumentFragment();
+  for(let i=renderedCount;i<end;i++){
+    frag.appendChild(buildRow(view[i], i));
+  }
+  tb.appendChild(frag);
+  renderedCount = end;
+  updateLoadMore();
+}
+
+function render(){
+  const tb=document.getElementById('tblBody');
+  tb.innerHTML='';
+  renderedCount = 0;
+  appendRows();
+  renderKPI();
+  renderTopByFormat();
+}
+
+function copyIdea(idx){
+  const p=view[idx];
+  const metricTxt = [
+    p.has_er        ? `ER ${p.er}%`             : null,
+    p.has_quality   ? `Quality ${p.quality}%`   : null,
+    p.has_like_rate ? `LikeRate ${p.like_rate}%`: null,
+  ].filter(Boolean).join(' · ') || 'metric —';
+  const txt=`[${p.format} · ${p.platform}] ${p.brand}\nTopic: ${p.topic}\nCaption: ${p.caption}\nผลลัพธ์: ${p.shares} shares · ${p.saves} saves · ${p.comments} comments · ${p.likes} likes · ${p.views} views (${metricTxt})\nLink: ${p.url}`;
+  navigator.clipboard.writeText(txt).then(()=>alert('Copied idea ✓'));
+}
+
+function renderKPI(){
+  const total=POSTS.length;
+  const tt=POSTS.filter(p=>p.platform==='TikTok').length;
+  const yt=POSTS.filter(p=>p.platform==='YouTube').length;
+  const ig=POSTS.filter(p=>p.platform==='Instagram').length;
+  const fb=POSTS.filter(p=>p.platform==='Facebook').length;
+  const totalShares=POSTS.reduce((a,b)=>a+b.shares,0);
+  const totalSaves=POSTS.reduce((a,b)=>a+b.saves,0);
+  const totalEng=POSTS.reduce((a,b)=>a+b.engagement,0);
+  // Avg metrics — เฉลี่ยเฉพาะ posts ที่คำนวณได้ (กัน N/A ฉุดค่า)
+  const erArr        = POSTS.filter(p=>p.has_er).map(p=>p.er);
+  const qualityArr   = POSTS.filter(p=>p.has_quality).map(p=>p.quality);
+  const likeRateArr  = POSTS.filter(p=>p.has_like_rate).map(p=>p.like_rate);
+  const avgEr        = erArr.length        ? (erArr.reduce((a,b)=>a+b,0)/erArr.length).toFixed(2)               : 0;
+  const avgQuality   = qualityArr.length   ? (qualityArr.reduce((a,b)=>a+b,0)/qualityArr.length).toFixed(2)     : 0;
+  const avgLikeRate  = likeRateArr.length  ? (likeRateArr.reduce((a,b)=>a+b,0)/likeRateArr.length).toFixed(2)   : 0;
+  const cAw  = POSTS.filter(p=>p.content_type==='Awareness').length;
+  const cEdu = POSTS.filter(p=>p.content_type==='Education').length;
+  const cEng = POSTS.filter(p=>p.content_type==='Engagement').length;
+  const cSel = POSTS.filter(p=>p.content_type==='Sell').length;
+  document.getElementById('kpiGrid').innerHTML=`
+    <div class="kpi"><div class="lbl">Total Posts</div><div class="val">${total}</div></div>
+    <div class="kpi"><div class="lbl">By Platform</div><div class="val" style="font-size:14px">🎵 ${tt} · ▶️ ${yt} · 📸 ${ig} · 👥 ${fb}</div><div class="small">TikTok / YT / IG / FB</div></div>
+    <div class="kpi"><div class="lbl">🏷️ ประเภท Content</div><div class="val" style="font-size:13px">
+      <span style="color:#0288D1">●</span> Aware ${cAw} ·
+      <span style="color:#2E7D32">●</span> Edu ${cEdu} ·
+      <span style="color:#F57C00">●</span> Eng ${cEng} ·
+      <span style="color:#C2185B">●</span> Sell ${cSel}
+    </div><div class="small">Awareness / Education / Engagement / Sell</div></div>
+    <div class="kpi"><div class="lbl">Total Shares</div><div class="val">${totalShares.toLocaleString()}</div></div>
+    <div class="kpi"><div class="lbl">Total Engagement</div><div class="val">${totalEng.toLocaleString()}</div></div>
+    <div class="kpi"><div class="lbl">Avg ER %</div><div class="val">${avgEr}%</div><div class="small">per-platform · n=${erArr.length}</div></div>
+    <div class="kpi"><div class="lbl">Avg Quality %</div><div class="val">${avgQuality}%</div><div class="small">cmt÷like · n=${qualityArr.length}</div></div>
+    <div class="kpi"><div class="lbl">Avg Like Rate %</div><div class="val">${avgLikeRate}%</div><div class="small">like÷view · n=${likeRateArr.length}</div></div>
+  `;
+}
+
+function renderTopByFormat(){
+  const formats=[...new Set(POSTS.map(p=>p.format))];
+  const html=formats.map(f=>{
+    const items=POSTS.filter(p=>p.format===f).sort(rankSort).slice(0,3);
+    return `<div class="fmt-card">
+      <h3>${fmtBadge(f)}<span class="cnt">${POSTS.filter(p=>p.format===f).length} posts</span></h3>
+      ${items.map(p=>`<div class="top-item">
+        <div class="b">${p.brand} · ${platformBadge(p.platform)}</div>
+        <div class="cap">${p.caption.substring(0,90)}${p.caption.length>90?'…':''}</div>
+        <div class="stats">🔁 ${p.shares} · 🔖 ${p.saves} · 💬 ${p.comments} · ❤️ ${p.likes} · 👁 ${p.views.toLocaleString()}${p.has_er?` · ER ${p.er}%`:''}${p.has_quality?` · Q ${p.quality}%`:''}${p.has_like_rate?` · L/V ${p.like_rate}%`:''}</div>
+        <a href="${p.url}" rel="noopener noreferrer">เปิด post ↗</a>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+  document.getElementById('fmtTop').innerHTML=html;
+}
+
+function resetFilters(){
+  ['fPlatform','fFormat','fBrand','fContentType','fTopic'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fSort').value='rank';
+  sortKey='rank';sortDir='desc';
+  document.querySelectorAll('th').forEach(t=>t.classList.remove('active','asc'));
+  document.querySelector('th[data-k="shares"]').classList.add('active');
+  applyFilters();
+}
+
+function exportCSV(){
+  const headers=['Brand','Platform','Format','ContentType','Topic','Date','Shares','Saves','Comments','Likes','Views','ER%','Quality%','LikeRate%','Engagement','Hashtags','Caption','URL'];
+  const rows=view.map(p=>[p.brand,p.platform,p.format,p.content_type,p.topic,p.date,p.shares,p.saves,p.comments,p.likes,p.views,p.has_er?p.er:'',p.has_quality?p.quality:'',p.has_like_rate?p.like_rate:'',p.engagement,p.hashtags,'"'+p.caption.replace(/"/g,'""')+'"',p.url]);
+  const csv=[headers.join(','),...rows.map(r=>r.join(','))].join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='biopalm_competitor_'+Date.now()+'.csv';a.click();
+}
+
+document.querySelectorAll('th[data-k]').forEach(th=>{
+  th.addEventListener('click',()=>{
+    const k=th.dataset.k;
+    if(sortKey===k){sortDir=sortDir==='desc'?'asc':'desc';}
+    else{sortKey=k;sortDir='desc';}
+    document.querySelectorAll('th').forEach(t=>t.classList.remove('active','asc'));
+    th.classList.add('active');
+    if(sortDir==='asc') th.classList.add('asc');
+    document.getElementById('fSort').value=k;
+    applySort();render();
+  });
+});
+['fPlatform','fFormat','fBrand','fContentType','fTopic'].forEach(id=>document.getElementById(id).addEventListener('change',applyFilters));
+document.getElementById('fSort').addEventListener('change',e=>{sortKey=e.target.value;sortDir='desc';applySort();render();});
+
+function init(){
+view = [...POSTS];
+fillSel('fPlatform', uniq(POSTS,'platform'));
+fillSel('fFormat',   uniq(POSTS,'format'));
+fillSel('fBrand',    uniq(POSTS,'brand'));
+fillSel('fContentType', uniq(POSTS,'content_type'));
+const allTopics=[...new Set(POSTS.flatMap(p=>p.topic.split(', ').filter(t=>t&&t!=='-')))].sort();
+fillSel('fTopic', allTopics);
+applyFilters();
+if (typeof Chart === 'undefined') { console.warn('Chart.js โหลดไม่สำเร็จ — ข้ามกราฟ'); return; }
+try {
+const isMobile = window.matchMedia('(max-width:640px)').matches;
+const fmtCounts={};POSTS.forEach(p=>{fmtCounts[p.format]=(fmtCounts[p.format]||0)+1});
+new Chart(document.getElementById('fmtChart'),{type:'doughnut',data:{labels:Object.keys(fmtCounts),datasets:[{data:Object.values(fmtCounts),backgroundColor:['#6ee7b7','#fbbf24','#f87171','#93c5fd','#c084fc']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:isMobile?'bottom':'right',labels:{color:'#e8eaed',font:{size:isMobile?10:12},boxWidth:isMobile?10:14,padding:isMobile?6:8}},title:{display:true,text:'Posts by Format',color:'#e8eaed',font:{size:isMobile?12:14}}}}});
+const brandCounts={};POSTS.forEach(p=>{brandCounts[p.brand]=(brandCounts[p.brand]||0)+p.engagement});
+const brandSorted=Object.entries(brandCounts).sort((a,b)=>b[1]-a[1]);
+const brandLabels=brandSorted.map(x=>x[0]);
+const brandData=brandSorted.map(x=>x[1]);
+// horizontal bars เสมอ — รองรับจำนวน brand ไม่จำกัด, ขนาด container ปรับตาม
+const brandBox=document.getElementById('brandChart').parentElement;
+brandBox.style.height=Math.max(260, brandLabels.length*28+60)+'px';
+new Chart(document.getElementById('brandChart'),{type:'bar',data:{labels:brandLabels,datasets:[{label:'Total Engagement',data:brandData,backgroundColor:'#6ee7b7'}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},title:{display:true,text:'Engagement by Brand (มาก→น้อย)',color:'#e8eaed',font:{size:isMobile?12:14}},tooltip:{callbacks:{label:ctx=>ctx.parsed.x.toLocaleString()+' engagement'}}},scales:{x:{ticks:{color:'#8a93a6',font:{size:isMobile?10:11},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}},y:{ticks:{color:'#8a93a6',font:{size:isMobile?10:11},autoSkip:false}}}}});
+
+} catch (e) { console.error('chart error', e); }
+}
+
+// ── ถอดรหัสข้อมูล (AES-256-GCM · กุญแจจาก PBKDF2-SHA256 ของ "ชื่อผู้ใช้:รหัสผ่าน") ──
+const SESSION_KEY = 'bp_social_session';
+const REMEMBER_DAYS = 7;
+const G = id => document.getElementById(id);
+const B64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const toB64 = u8 => { let s = ''; for (const b of u8) s += String.fromCharCode(b); return btoa(s); };
+let MAN = null, KEY = null;
+
+const MANP = fetch('manifest.json', {cache:'no-store'})
+  .then(r => { if (!r.ok) throw new Error('nomanifest'); return r.json(); })
+  .then(m => (MAN = m));
+
+async function gunzip(buf){
+  if (typeof DecompressionStream === 'undefined') throw new Error('oldbrowser');
+  const st = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Uint8Array(await new Response(st).arrayBuffer());
+}
+async function openBlob(o, key){
+  const pt = new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM', iv:B64(o.i)}, key, B64(o.c)));
+  return JSON.parse(new TextDecoder().decode(o.z === 'gzip' ? await gunzip(pt) : pt));
+}
+async function deriveKey(user, pass){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(user + ':' + pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt:B64(MAN.kdf.s), iterations:MAN.kdf.n, hash:'SHA-256'},
+    base, {name:'AES-GCM', length:256}, true, ['decrypt']);
+}
+function saveSession(key, user, remember){
+  crypto.subtle.exportKey('raw', key).then(raw => {
+    const v = JSON.stringify({k: toB64(new Uint8Array(raw)), u: user, s: MAN.kdf.s, exp: Date.now() + REMEMBER_DAYS*864e5});
+    try { (remember ? localStorage : sessionStorage).setItem(SESSION_KEY, v); } catch (e) {}
+  });
+}
+function readSession(){
+  for (const store of [sessionStorage, localStorage]) {
+    try {
+      const o = JSON.parse(store.getItem(SESSION_KEY) || 'null');
+      if (o && o.exp > Date.now()) return o;
+      store.removeItem(SESSION_KEY);
+    } catch (e) {}
+  }
+  return null;
+}
+function clearSession(){
+  for (const store of [sessionStorage, localStorage]) { try { store.removeItem(SESSION_KEY); } catch (e) {} }
+}
+function logout(){ clearSession(); location.reload(); }
+
+async function unlock(key, user){
+  await openBlob(MAN.check, key);                       // รหัสผิด → throw ตรงนี้
+  const r = await fetch(MAN.files.posts, {cache:'no-store'});
+  if (!r.ok) throw new Error('nodata');
+  const data = await openBlob(await r.json(), key);
+  POSTS = Array.isArray(data) ? data : (data.posts || []);
+  const m = data.meta || {};
+  if (m.label) G('dashTitle').textContent = '📊 Biopalm Social Dashboard — ' + m.label;
+  const range = (m.date_min && m.date_max) ? ` · โพสต์ ${esc(m.date_min)} → ${esc(m.date_max)}` : '';
+  G('dashSub').innerHTML = `จากไฟล์ <code>${esc(m.source || '-')}</code>${range} · เรียงตาม Shares → Saves → Comments → Likes`;
+  KEY = key;
+  G('gate').remove();
+  G('app').hidden = false;
+  applyWatermark(user || 'Biopalm');
+  init();
+}
+
+function showErr(msg){ const e = G('gerr'); e.textContent = msg; e.classList.add('on'); }
+
+G('gform').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  G('gerr').classList.remove('on');
+  const btn = G('gb'); btn.disabled = true; btn.textContent = 'กำลังถอดรหัส…';
+  const user = G('gu').value.trim(), pass = G('gp').value, remember = G('grem').checked;
+  let key;
+  try {
+    await MANP;
+    key = await deriveKey(user, pass);
+    await openBlob(MAN.check, key);                     // รหัสผิด → throw ตรงนี้
+  } catch (x) {
+    btn.disabled = false; btn.textContent = 'เข้าดู Dashboard';
+    if (x && x.message === 'nomanifest') showErr('โหลดไฟล์ข้อมูลไม่สำเร็จ — ลองรีเฟรชหน้า');
+    else { showErr('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'); G('gp').value = ''; G('gp').focus(); }
+    return;
+  }
+  try {
+    await unlock(key, user);
+    saveSession(key, user, remember);
+  } catch (x) {
+    console.error(x);
+    if (!G('gate')) return;
+    btn.disabled = false; btn.textContent = 'เข้าดู Dashboard';
+    showErr(x && x.message === 'oldbrowser'
+      ? 'เบราว์เซอร์นี้เก่าเกินไป — ลองเปิดด้วย Chrome / Safari เวอร์ชันล่าสุด'
+      : 'โหลดไฟล์ข้อมูลไม่สำเร็จ — ลองรีเฟรชหน้า');
+  }
+});
+
+// เปิดค้างไว้จากครั้งก่อน (ยังไม่ครบ 7 วัน และยังเป็นรหัสชุดเดิม) → เข้าได้เลย
+(async () => {
+  const s = readSession();
+  if (!s) { setTimeout(() => G('gu')?.focus(), 50); return; }
+  try {
+    await MANP;
+    if (s.s !== MAN.kdf.s) throw new Error('stale');
+    const key = await crypto.subtle.importKey('raw', B64(s.k), {name:'AES-GCM'}, true, ['decrypt']);
+    await unlock(key, s.u);
+  } catch (e) {
+    clearSession();
+    if (!G('gate')) { console.error(e); return; }
+    G('gu').value = (s && s.u) || '';
+    G('gp').focus();
+  }
+})();
+</script>
+</body>
+</html>
