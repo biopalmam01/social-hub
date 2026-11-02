@@ -302,7 +302,7 @@ td[data-label="#Tags"], td[data-label="Total Eng"]{font-size:11px;color:var(--mu
   </div>
 
   <div class="section">
-    <h2>🏆 Top 3 ของแต่ละ Format (แนะนำให้ดูก่อน)</h2>
+    <h2>🏆 Top 3 ของแต่ละ Format แยกตาม Platform (แนะนำให้ดูก่อน)</h2>
     <div class="fmt-grid" id="fmtTop"></div>
   </div>
 
@@ -594,11 +594,14 @@ function renderKPI(){
 }
 
 function renderTopByFormat(){
-  const formats=[...new Set(POSTS.map(p=>p.format))];
-  const html=formats.map(f=>{
-    const items=POSTS.filter(p=>p.format===f).sort(rankSort).slice(0,3);
+  // แยกการ์ดตาม format × platform — ไม่งั้น platform ที่ยอด share สูง (FB) ยึด top 3 ของทั้ง format จน IG ไม่โผล่
+  const groups=[...new Set(POSTS.map(p=>p.format+'|'+p.platform))].sort();
+  const html=groups.map(g=>{
+    const [f,pf]=g.split('|');
+    const all=POSTS.filter(p=>p.format===f&&p.platform===pf);
+    const items=[...all].sort(rankSort).slice(0,3);
     return `<div class="fmt-card">
-      <h3>${fmtBadge(f)}<span class="cnt">${POSTS.filter(p=>p.format===f).length} posts</span></h3>
+      <h3>${fmtBadge(f)} ${platformBadge(pf)}<span class="cnt">${all.length} posts</span></h3>
       ${items.map(p=>`<div class="top-item">
         <div class="b">${p.brand} · ${platformBadge(p.platform)}</div>
         <div class="cap">${p.caption.substring(0,90)}${p.caption.length>90?'…':''}</div>
