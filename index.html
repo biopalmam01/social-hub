@@ -99,6 +99,16 @@ td[data-label="#Tags"], td[data-label="Total Eng"]{font-size:11px;color:var(--mu
 
 /* === Top bar (title + logout) === */
 .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.top-actions{display:flex;gap:8px;flex-shrink:0}
+.top-actions .btn{width:auto !important;font-size:12px !important;padding:6px 12px !important;min-height:32px !important}
+.wk-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.wk-head select{background:#0f1117;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:13px}
+.wk-own td{background:rgba(110,231,183,.08)}
+.up{color:var(--accent)}.down{color:var(--danger)}
+.wk-warn{border-color:var(--accent2)}
+.wk-warn li{margin:2px 0}
+.wk-bad{color:var(--danger);font-weight:600}
+@media print{.no-print{display:none !important}body{background:#fff}}
 .topbar .logout{text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap;width:auto !important;font-size:12px !important;padding:6px 12px !important;min-height:32px !important;flex-shrink:0}
 
 /* === Watermark overlay === */
@@ -290,10 +300,16 @@ td[data-label="#Tags"], td[data-label="Total Eng"]{font-size:11px;color:var(--mu
 <div class="container" id="app" hidden>
   <div class="topbar">
     <h1 id="dashTitle">📊 Biopalm Social Dashboard</h1>
-    <button type="button" class="btn btn-ghost logout" onclick="logout()">ออกจากระบบ</button>
+    <div class="top-actions no-print">
+      <button type="button" class="btn" id="weeklyBtn" onclick="toggleWeekly()">📅 Weekly Report</button>
+      <button type="button" class="btn btn-ghost logout" onclick="logout()">ออกจากระบบ</button>
+    </div>
   </div>
   <div class="sub" id="dashSub">กำลังโหลดข้อมูล…</div>
 
+  <div id="weeklyView" hidden></div>
+
+  <div id="mainView">
   <div class="kpi-grid" id="kpiGrid"></div>
 
   <div class="charts">
@@ -380,6 +396,7 @@ td[data-label="#Tags"], td[data-label="Total Eng"]{font-size:11px;color:var(--mu
       ประเภท Content (Awareness/Education/Engagement/Sell) classify โดย Claude Haiku
     </div>
   </div>
+  </div><!-- /mainView -->
 </div>
 
 <script>
@@ -671,6 +688,117 @@ new Chart(document.getElementById('brandChart'),{type:'bar',data:{labels:brandLa
 } catch (e) { console.error('chart error', e); }
 }
 
+// ── Weekly Report (สัปดาห์ จ.–อา.) ─────────────────────────────────
+let WK_META = {};
+const DAY_MS = 864e5;
+const isoAdd = (iso, n) => new Date(Date.parse(iso + 'T00:00:00Z') + n * DAY_MS).toISOString().slice(0, 10);
+const wkStart = iso => isoAdd(iso, -((new Date(iso + 'T00:00:00Z').getUTCDay() + 6) % 7));
+const thDate = iso => { const [y, m, d] = iso.split('-'); return `${+d}/${+m}/${y}`; };
+function pctChange(a, b){
+  if (!b) return a ? '<span class="up">ใหม่</span>' : '<span class="muted">—</span>';
+  const v = Math.round((a - b) / b * 100);
+  return `<span class="${v >= 0 ? 'up' : 'down'}">${v >= 0 ? '+' : ''}${v}%</span>`;
+}
+function toggleWeekly(){
+  const on = G('weeklyView').hidden;
+  G('weeklyView').hidden = !on;
+  G('mainView').hidden = on;
+  G('weeklyBtn').textContent = on ? '📊 กลับหน้าหลัก' : '📅 Weekly Report';
+  if (on) renderWeekly();
+  window.scrollTo(0, 0);
+}
+function wkAgg(arr){
+  const m = {};
+  arr.forEach(p => {
+    const o = m[p.brand] || (m[p.brand] = {n: 0, eng: 0, fmt: {}, ct: {}, pl: {}});
+    o.n++; o.eng += p.engagement;
+    o.fmt[p.format] = (o.fmt[p.format] || 0) + 1;
+    o.ct[p.content_type] = (o.ct[p.content_type] || 0) + 1;
+    o.pl[p.platform] = (o.pl[p.platform] || 0) + 1;
+  });
+  return m;
+}
+const topKeys = o => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${esc(k)} ${v}`).join(' · ');
+function wkCoverage(wk){
+  const st = WK_META.fetch_status;
+  if (!st || !st.platforms) return '<div class="section wk-warn"><h2>⚠️ ความครบของข้อมูล</h2><div class="muted">ยังไม่มีสถานะการดึงรายบัญชี (ข้อมูลรอบเก่า) — รอบดึงอัตโนมัติถัดไปจะเติมให้</div></div>';
+  const now = Date.now();
+  const rows = Object.entries(st.platforms).sort().map(([pf, p]) => {
+    const ageD = Math.floor((now - Date.parse(p.fetched_at)) / DAY_MS);
+    const zero = p.accounts.filter(a => !a.posts);
+    const covers = isoAdd(p.fetched_at.slice(0, 10), -p.days) <= wk;
+    return `<li>${platformBadge(pf)} ดึงล่าสุด ${thDate(p.fetched_at.slice(0, 10))}
+      ${ageD > 8 ? `<span class="wk-bad">(ค้าง ${ageD} วัน — รอบดึงไม่ได้รัน)</span>` : `<span class="muted">(${ageD} วันก่อน · ย้อน ${p.days} วัน)</span>`}
+      · ${p.accounts.length - zero.length}/${p.accounts.length} บัญชีมีโพสต์
+      ${covers ? '' : '<span class="wk-bad">· สัปดาห์นี้อยู่นอกช่วงดึงรอบล่าสุด</span>'}
+      ${zero.length ? `<br><span class="muted">ได้ 0: ${zero.map(a => esc(a.brand)).join(', ')}</span>` : ''}</li>`;
+  }).join('');
+  const bad = rows.includes('wk-bad');
+  return `<div class="section ${bad ? 'wk-warn' : ''}"><h2>${bad ? '⚠️' : '✅'} ความครบของข้อมูล</h2><ul style="margin:0;padding-left:18px;font-size:13px">${rows}</ul>
+    <div class="small muted" style="margin-top:6px">«ได้ 0» = ไม่ได้โพสต์ในช่วงที่ดึง หรือดึงไม่สำเร็จ (TikTok/IG บล็อกบางรอบ) — ยอด like/view เป็นค่า ณ วันที่ดึง โพสต์ใหม่ยอดยังไม่นิ่ง</div></div>`;
+}
+function renderWeekly(wk){
+  const weeks = [...new Set(POSTS.filter(p => p.date).map(p => wkStart(p.date)))].sort().reverse().slice(0, 20);
+  const today = new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 10);   // วันนี้ตามเวลาไทย
+  wk = wk || weeks.find(w => isoAdd(w, 6) < today) || weeks[0];                  // ค่าเริ่มต้น = สัปดาห์ล่าสุดที่จบแล้ว
+  if (!wk) { G('weeklyView').innerHTML = '<div class="section">ไม่มีข้อมูล</div>'; return; }
+  const prev = isoAdd(wk, -7);
+  const inWeek = (p, s) => p.date && p.date >= s && p.date <= isoAdd(s, 6);
+  const cur = POSTS.filter(p => inWeek(p, wk)), old = POSTS.filter(p => inWeek(p, prev));
+  const A = wkAgg(cur), B = wkAgg(old);
+  const own = (WK_META.fetch_status || {}).own_brand || '';
+  const brands = [...new Set([...Object.keys(A), ...Object.keys(B)])]
+    .sort((a, b) => (b === own) - (a === own) || (A[b]?.eng || 0) - (A[a]?.eng || 0));
+  const engCur = cur.reduce((a, p) => a + p.engagement, 0), engOld = old.reduce((a, p) => a + p.engagement, 0);
+  const st = WK_META.fetch_status && WK_META.fetch_status.platforms;
+  const allBrands = st ? [...new Set(Object.values(st).flatMap(p => p.accounts.map(a => a.brand)))] : [];
+  const silent = allBrands.filter(b => !A[b]).sort();
+  const compN = Object.keys(A).filter(b => b !== own);
+  const compAvg = compN.length ? (compN.reduce((a, b) => a + A[b].n, 0) / compN.length).toFixed(1) : '—';
+  const opts = weeks.map(w => `<option value="${w}" ${w === wk ? 'selected' : ''}>จ. ${thDate(w)} – อา. ${thDate(isoAdd(w, 6))}${isoAdd(w, 6) >= today ? ' (ยังไม่จบ)' : ''}</option>`).join('');
+  const brandRows = brands.map(b => {
+    const a = A[b] || {n: 0, eng: 0, fmt: {}, ct: {}, pl: {}}, o = B[b] || {n: 0, eng: 0};
+    return `<tr class="${b === own ? 'wk-own' : ''}">
+      <td data-label="Brand"><strong>${esc(b)}</strong>${b === own ? ' 🌿' : ''}</td>
+      <td data-label="โพสต์" class="num"><strong>${a.n}</strong></td>
+      <td data-label="สัปดาห์ก่อน" class="num muted">${o.n}</td>
+      <td data-label="Δ โพสต์" class="num">${pctChange(a.n, o.n)}</td>
+      <td data-label="Engagement" class="num">${a.eng.toLocaleString()}</td>
+      <td data-label="Δ Eng" class="num">${pctChange(a.eng, o.eng)}</td>
+      <td data-label="Platform" class="muted">${topKeys(a.pl) || '—'}</td>
+      <td data-label="Format" class="muted">${topKeys(a.fmt) || '—'}</td>
+      <td data-label="ประเภท" class="muted">${topKeys(a.ct) || '—'}</td>
+    </tr>`;
+  }).join('');
+  const plats = [...new Set(cur.map(p => p.platform))].sort();
+  const topCards = plats.map(pf => {
+    const items = cur.filter(p => p.platform === pf).sort(rankSort).slice(0, 5);
+    return `<div class="fmt-card"><h3>${platformBadge(pf)} Top 5 สัปดาห์นี้<span class="cnt">${cur.filter(p => p.platform === pf).length} posts</span></h3>
+      ${items.map(p => `<div class="top-item">
+        <div class="b">${esc(p.brand)} · ${fmtBadge(p.format)} ${ctypeBadge(p.content_type)} <span class="muted">${thDate(p.date)}</span></div>
+        <div class="cap">${esc(p.caption.substring(0, 110))}${p.caption.length > 110 ? '…' : ''}</div>
+        <div class="stats">🔁 ${p.shares} · 🔖 ${p.saves} · 💬 ${p.comments} · ❤️ ${p.likes} · 👁 ${p.views.toLocaleString()}</div>
+        <a href="${esc(p.url)}" rel="noopener noreferrer">เปิด post ↗</a></div>`).join('')}</div>`;
+  }).join('');
+  G('weeklyView').innerHTML = `
+    <div class="wk-head no-print">
+      <label>สัปดาห์ <select id="wkSel" onchange="renderWeekly(this.value)">${opts}</select></label>
+      <button type="button" class="btn btn-ghost" onclick="window.print()">🖨️ พิมพ์ / บันทึก PDF</button>
+    </div>
+    <h2 style="margin:0 0 10px">📅 Weekly Report · จ. ${thDate(wk)} – อา. ${thDate(isoAdd(wk, 6))} <span class="muted" style="font-size:13px;font-weight:400">เทียบสัปดาห์ก่อน (${thDate(prev)})</span></h2>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="lbl">โพสต์ทั้งหมด</div><div class="val">${cur.length}</div><div class="small">สัปดาห์ก่อน ${old.length} · ${pctChange(cur.length, old.length)}</div></div>
+      <div class="kpi"><div class="lbl">Engagement รวม</div><div class="val">${engCur.toLocaleString()}</div><div class="small">สัปดาห์ก่อน ${engOld.toLocaleString()} · ${pctChange(engCur, engOld)}</div></div>
+      <div class="kpi"><div class="lbl">แบรนด์ที่โพสต์</div><div class="val">${Object.keys(A).length}${allBrands.length ? ` / ${allBrands.length}` : ''}</div><div class="small">${silent.length ? 'เงียบ: ' + silent.map(esc).join(', ') : 'โพสต์ครบทุกแบรนด์'}</div></div>
+      ${own ? `<div class="kpi"><div class="lbl">🌿 ${esc(own)} vs คู่แข่ง</div><div class="val">${A[own]?.n || 0} <span class="muted" style="font-size:13px">vs เฉลี่ย ${compAvg}</span></div><div class="small">โพสต์/สัปดาห์</div></div>` : ''}
+    </div>
+    ${wkCoverage(wk)}
+    <div class="section"><h2>🏁 สรุปรายแบรนด์ (เรียงตาม Engagement)</h2><div class="tbl-wrap"><table>
+      <thead><tr><th>Brand</th><th class="num">โพสต์</th><th class="num">สัปดาห์ก่อน</th><th class="num">Δ โพสต์</th><th class="num">Engagement</th><th class="num">Δ Eng</th><th>Platform</th><th>Format</th><th>ประเภท</th></tr></thead>
+      <tbody>${brandRows || '<tr><td colspan="9" class="muted">ไม่มีโพสต์ในสัปดาห์นี้</td></tr>'}</tbody></table></div></div>
+    <div class="section"><h2>🏆 โพสต์เด่นของสัปดาห์ (แยก Platform)</h2><div class="fmt-grid">${topCards || '<div class="muted">ไม่มีโพสต์</div>'}</div></div>`;
+}
+
 // ── ถอดรหัสข้อมูล (AES-256-GCM · กุญแจจาก PBKDF2-SHA256 ของ "ชื่อผู้ใช้:รหัสผ่าน") ──
 const SESSION_KEY = 'bp_social_session';
 const REMEMBER_DAYS = 7;
@@ -725,6 +853,7 @@ async function unlock(key, user){
   const data = await openBlob(await r.json(), key);
   POSTS = Array.isArray(data) ? data : (data.posts || []);
   const m = data.meta || {};
+  WK_META = m;
   if (m.label) G('dashTitle').textContent = '📊 Biopalm Social Dashboard — ' + m.label;
   const range = (m.date_min && m.date_max) ? ` · โพสต์ ${esc(m.date_min)} → ${esc(m.date_max)}` : '';
   G('dashSub').innerHTML = `จากไฟล์ <code>${esc(m.source || '-')}</code>${range} · เรียงตาม Shares → Saves → Comments → Likes`;
